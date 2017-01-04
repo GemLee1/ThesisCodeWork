@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import expit
 
-
-
 def getData (data_name, is_integer = True):
     #
     with open(
