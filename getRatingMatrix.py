@@ -6,7 +6,7 @@ from scipy.special import expit
 def getData (data_name, is_integer = True):
     #
     with open(
-            '/Users/mine/Dropbox/Thesis/Recommender-BayesianDeep/Bayesian Deep/RecommenderSystems/citeulike-a/'+data_name+'.dat',
+            './citeulike-a/'+data_name+'.dat',
             'r') as f:
         next(f)  # skip first row
         data = pd.DataFrame(l.rstrip().split() for l in f)
@@ -48,12 +48,12 @@ def gradient(d, i, j, U, V, R, I, var, var_u, var_v, which):
             tot += I[i][j] * (U[d][i] ** 2 * V[d][j] - R[i][j]*U[d][i])
         return (tot + var * V[d][j] / var_v)
 
-def minimization_of_objective(N, M, D, R, I, var, var_u, var_v, step_size, precision):
+def minimization_of_objective(N, M, D, R, I, var, var_u, var_v, step_size, precision, num_iter):
     U = get_initialization(D, N, 0, var_u)
     V = get_initialization(D, M, 0, var_v)
     j=0
 
-    for t in np.arange(0,70):
+    for t in np.arange(0,num_iter):
         for d in np.arange(0,D-1):
             for i in np.arange(0,N-1,1):
                 old_u = U[d][i]
@@ -67,9 +67,11 @@ def minimization_of_objective(N, M, D, R, I, var, var_u, var_v, step_size, preci
 def get_precision(R, U, V, var):
     (N,M) = np.shape(R)
     pres = 0
+    Rec_mat = np.matmul(np.matrix.transpose(U), V)
     for i in range(0,N-1):
         for j in range(0,M-1):
-            g_ij = expit(np.matmul(np.matrix.transpose(U[:,i]),V[:,j]))
+            #g_ij = expit(np.matmul(np.matrix.transpose(U[:,i]),V[:,j]))
+            g_ij = Rec_mat[i,j]
             guess = np.random.normal(g_ij, var)
             #rnd = np.random.uniform()
             if (guess >= 0.5 and R[i,j]==1):
@@ -90,23 +92,37 @@ def get_training_data(R, P):
             I[0, choice] = 1
     return(I)
 
+def get_M_recommendation(U, V, M):
+    N = np.shape(U)[1]
+    M = np.shape(V)[1]
+
+    Recm_vals =  np.matmul(np.matrix.transpose(U), V)
+    Recm = np.zeros((N,M))
+    for i in range(0,N):
+        pred_list = Recm_vals[i,]
+        rec_ind = np.argsort(pred_list)
+        Recm[i,0:len(rec_ind)] = rec_ind
+
+    return(Recm)
+
 
 data = getData('users')
 mat = user_data_to_rating_matrix(data)
 R = reduce_data(mat, 30, 500)
 
-D = 20
+D = 25
 var = 1
 var_u = 1
 var_v = 1
 step_size = 0.0001
 precision = 0.000001
+num_iter = 100
 (N,M) = np.shape(R)
 I = R
 
 
 I = get_training_data(R, 5)
-(U,V) = minimization_of_objective(N, M, D, R, I, var, var_u, var_v, step_size, precision)
+(U,V) = minimization_of_objective(N, M, D, R, I, var, var_u, var_v, step_size, precision, num_iter)
 
 #print(U)
 #print(V)
@@ -114,7 +130,9 @@ I = get_training_data(R, 5)
 #print(np.matmul(np.matrix.transpose(U),V))
 
 
-print(get_precision(R,U,V,var))
+#print(get_precision(R,U,V,var))
+
+print(get_M_recommendation(U, V, 50))
 
 
 #plt.matshow(red_data+1)
